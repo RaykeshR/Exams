@@ -1,0 +1,24 @@
+services:
+  producer:
+    build: ./producer
+    ports:
+      - "8081:5000"
+      # Redirection de port (port_host:port_container)
+    volumes:
+      - ./data:/data
+
+  consumer:
+    build: ./consumer
+    ports:
+      - "8082:5001"
+      # Redirection de port (port_host:port_container)
+    volumes:
+      - ./data:/data
+  
+  analyzer:
+    build: ./analyzer
+    ports:
+      - "8083:5002"
+      # Redirection de port (port_host:port_container)
+    volumes:
+      - ./data:/data

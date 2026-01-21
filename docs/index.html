@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demo Statique - Docker Equation App</title>
+    <title>Calculateur Dynamique - Docker Demo</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .grid-demo { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem; }
-        .service-box { border: 2px solid #333; padding: 1rem; border-radius: 8px; background: #1a1a1a; }
-        .status-badge { background: #2e7d32; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; float: right; }
-        #stats-container { font-family: monospace; color: #4ade80; }
+        .service-box { border: 2px solid #333; padding: 1.5rem; border-radius: 8px; background: #1a1a1a; position: relative; }
+        .status-badge { background: #2e7d32; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; position: absolute; top: 10px; right: 10px; }
+        #stats-container { font-family: monospace; color: #4ade80; background: #000; padding: 10px; border-radius: 4px; min-height: 80px; }
+        .error-msg { color: #ff5252; font-size: 0.8rem; margin-top: 0.5rem; }
         @media (max-width: 800px) { .grid-demo { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -18,44 +19,45 @@
     <main class="container">
         <header>
             <hgroup>
-                <h1>Démo Interactive (Simulation sur GitHub Pages)</h1>
-                <h2>Visualisation statique du projet Cloud Computing</h2>
+                <h1>Application Cloud Computing - Démo Live</h1>
+                <h2>Simulateur d'infrastructure multi-services</h2>
             </hgroup>
         </header>
 
         <section>
-            <p>Cette page simule le fonctionnement de votre infrastructure Docker Compose directement dans votre navigateur.</p>
-            
             <div class="grid-demo">
                 <!-- Simulation Service PRODUCER -->
                 <div class="service-box">
-                    <span class="status-badge">Simulation Producer (8081)</span>
+                    <span class="status-badge">Producer (8081)</span>
                     <h3>1. Générateur</h3>
-                    <p>Équation fixée : <code>y = x² + 3</code></p>
-                    <button id="compute-btn" class="outline">Calculer les données</button>
-                    <small id="producer-msg" style="display:block; margin-top:0.5rem;"></small>
+                    <label for="equation">Équation y =</label>
+                    <input type="text" id="equation" placeholder="x**2 + 3" value="x**2 + 3">
+                    <button id="compute-btn">Calculer & Synchroniser</button>
+                    <div id="error-output" class="error-msg"></div>
+                    <small>Astuces: <code>x**2</code>, <code>Math.sin(x)</code>, <code>Math.exp(x)</code></small>
                 </div>
 
                 <!-- Simulation Service ANALYZER -->
                 <div class="service-box">
-                    <span class="status-badge">Simulation Analyzer (8083)</span>
+                    <span class="status-badge">Analyzer (8083)</span>
                     <h3>2. Statistiques</h3>
                     <div id="stats-container">
-                        Cliquez sur "Calculer" pour voir les stats...
+                        En attente de calcul...
                     </div>
                 </div>
             </div>
 
             <!-- Simulation Service CONSUMER -->
             <div class="service-box" style="margin-top: 2rem;">
-                <span class="status-badge">Simulation Consumer (8082)</span>
-                <h3>3. Visualisation Graphique</h3>
+                <span class="status-badge">Consumer (8082)</span>
+                <h3>3. Visualisation (Matplotlib Like)</h3>
                 <canvas id="myChart" style="max-height: 400px;"></canvas>
             </div>
         </section>
 
         <footer style="margin-top: 3rem; text-align: center; border-top: 1px solid #333; padding-top: 1rem;">
-            <p><a href="https://github.com/votre-utilisateur/votre-repo">Retour au code source du projet</a></p>
+            <p>Ce projet utilise Docker Compose pour orchestrer 3 services Python. <br> 
+            <a href="https://github.com/votre-utilisateur/votre-repo">Accéder au dépôt GitHub</a></p>
         </footer>
     </main>
 
@@ -64,46 +66,65 @@
         const ctx = document.getElementById('myChart').getContext('2d');
 
         function updateStats(yValues) {
-            const min = Math.min(...yValues).toFixed(2);
-            const max = Math.max(...yValues).toFixed(2);
-            const avg = (yValues.reduce((a, b) => a + b, 0) / yValues.length).toFixed(2);
+            const validValues = yValues.filter(v => !isNaN(v) && isFinite(v));
+            if (validValues.length === 0) return;
+
+            const min = Math.min(...validValues).toFixed(3);
+            const max = Math.max(...validValues).toFixed(3);
+            const avg = (validValues.reduce((a, b) => a + b, 0) / validValues.length).toFixed(3);
 
             document.getElementById('stats-container').innerHTML = `
-                Min : ${min} <br>
-                Max : ${max} <br>
-                Moyenne : ${avg}
+                <strong>Min (Valeur min signal) :</strong> ${min} <br>
+                <strong>Max (Valeur max signal) :</strong> ${max} <br>
+                <strong>Moyenne (Average) :</strong> ${avg}
             `;
         }
 
         function runSimulation() {
+            const eqInput = document.getElementById('equation').value;
+            const errorOutput = document.getElementById('error-output');
+            errorOutput.innerText = "";
+            
             const xValues = [];
             const yValues = [];
-            // Simuler l'intervalle [-10, 10] comme dans app.py
-            for (let x = -10; x <= 10; x += 0.5) {
-                xValues.push(x);
-                yValues.push(Math.pow(x, 2) + 3);
+            
+            try {
+                // Remplacement de x**y par Math.pow(x, y) pour le JS
+                let jsEq = eqInput.replace(/(\w+)\*\*(\w+)/g, 'Math.pow($1, $2)');
+                // Remplacement de np. par Math. pour coller à la syntaxe Python du projet
+                jsEq = jsEq.replace(/np\./g, 'Math.');
+
+                for (let x = -10; x <= 10; x += 0.2) {
+                    // Utilisation de Function pour évaluer l'expression de manière un peu plus safe que eval
+                    const y = new Function('x', `return ${jsEq}`)(x);
+                    xValues.push(x.toFixed(1));
+                    yValues.push(y);
+                }
+
+                updateStats(yValues);
+                renderChart(xValues, yValues, eqInput);
+                
+            } catch (e) {
+                errorOutput.innerText = "Erreur dans l'équation ! Utilisez 'x' et les fonctions Math (ex: Math.sin(x)).";
+                console.error(e);
             }
+        }
 
-            // Mettre à jour le message du "Producer"
-            document.getElementById('producer-msg').innerText = "✅ Données générées avec succès !";
-            document.getElementById('producer-msg').style.color = "#4ade80";
-
-            // Mettre à jour les stats (Analyzer)
-            updateStats(yValues);
-
-            // Mettre à jour le graphique (Consumer)
+        function renderChart(labels, data, title) {
             if (chart) chart.destroy();
             chart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: xValues,
+                    labels: labels,
                     datasets: [{
-                        label: 'y = x² + 3',
-                        data: yValues,
+                        label: 'y = ' + title,
+                        data: data,
                         borderColor: '#3b82f6',
                         backgroundColor: 'rgba(59, 130, 246, 0.1)',
                         fill: true,
-                        tension: 0.4
+                        pointRadius: 0,
+                        borderWidth: 2,
+                        tension: 0.2
                     }]
                 },
                 options: {
@@ -118,6 +139,9 @@
         }
 
         document.getElementById('compute-btn').addEventListener('click', runSimulation);
+        
+        // Lancement initial
+        window.onload = runSimulation;
     </script>
 </body>
 </html>

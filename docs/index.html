@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Statique - Docker Equation App</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .grid-demo { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem; }
+        .service-box { border: 2px solid #333; padding: 1rem; border-radius: 8px; background: #1a1a1a; }
+        .status-badge { background: #2e7d32; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; float: right; }
+        #stats-container { font-family: monospace; color: #4ade80; }
+        @media (max-width: 800px) { .grid-demo { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <header>
+            <hgroup>
+                <h1>Démo Interactive (Simulation sur GitHub Pages)</h1>
+                <h2>Visualisation statique du projet Cloud Computing</h2>
+            </hgroup>
+        </header>
+
+        <section>
+            <p>Cette page simule le fonctionnement de votre infrastructure Docker Compose directement dans votre navigateur.</p>
+            
+            <div class="grid-demo">
+                <!-- Simulation Service PRODUCER -->
+                <div class="service-box">
+                    <span class="status-badge">Simulation Producer (8081)</span>
+                    <h3>1. Générateur</h3>
+                    <p>Équation fixée : <code>y = x² + 3</code></p>
+                    <button id="compute-btn" class="outline">Calculer les données</button>
+                    <small id="producer-msg" style="display:block; margin-top:0.5rem;"></small>
+                </div>
+
+                <!-- Simulation Service ANALYZER -->
+                <div class="service-box">
+                    <span class="status-badge">Simulation Analyzer (8083)</span>
+                    <h3>2. Statistiques</h3>
+                    <div id="stats-container">
+                        Cliquez sur "Calculer" pour voir les stats...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulation Service CONSUMER -->
+            <div class="service-box" style="margin-top: 2rem;">
+                <span class="status-badge">Simulation Consumer (8082)</span>
+                <h3>3. Visualisation Graphique</h3>
+                <canvas id="myChart" style="max-height: 400px;"></canvas>
+            </div>
+        </section>
+
+        <footer style="margin-top: 3rem; text-align: center; border-top: 1px solid #333; padding-top: 1rem;">
+            <p><a href="https://github.com/votre-utilisateur/votre-repo">Retour au code source du projet</a></p>
+        </footer>
+    </main>
+
+    <script>
+        let chart;
+        const ctx = document.getElementById('myChart').getContext('2d');
+
+        function updateStats(yValues) {
+            const min = Math.min(...yValues).toFixed(2);
+            const max = Math.max(...yValues).toFixed(2);
+            const avg = (yValues.reduce((a, b) => a + b, 0) / yValues.length).toFixed(2);
+
+            document.getElementById('stats-container').innerHTML = `
+                Min : ${min} <br>
+                Max : ${max} <br>
+                Moyenne : ${avg}
+            `;
+        }
+
+        function runSimulation() {
+            const xValues = [];
+            const yValues = [];
+            // Simuler l'intervalle [-10, 10] comme dans app.py
+            for (let x = -10; x <= 10; x += 0.5) {
+                xValues.push(x);
+                yValues.push(Math.pow(x, 2) + 3);
+            }
+
+            // Mettre à jour le message du "Producer"
+            document.getElementById('producer-msg').innerText = "✅ Données générées avec succès !";
+            document.getElementById('producer-msg').style.color = "#4ade80";
+
+            // Mettre à jour les stats (Analyzer)
+            updateStats(yValues);
+
+            // Mettre à jour le graphique (Consumer)
+            if (chart) chart.destroy();
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: xValues,
+                    datasets: [{
+                        label: 'y = x² + 3',
+                        data: yValues,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { labels: { color: 'white' } } },
+                    scales: {
+                        y: { grid: { color: '#333' }, ticks: { color: 'white' } },
+                        x: { grid: { color: '#333' }, ticks: { color: 'white' } }
+                    }
+                }
+            });
+        }
+
+        document.getElementById('compute-btn').addEventListener('click', runSimulation);
+    </script>
+</body>
+</html>
